@@ -25,8 +25,8 @@ app.get("/salesforce", async (req, res) => {
   console.log('OUTPUT : ',basicUrl);
   // const token = await sharepoint.getAccessToken();
   // console.log('token : ',token);
-  // const file = await salesforce.getFile(basicUrl, contVerId);
-  // console.log('file : ',file);
+  const file = await salesforce.getFile(basicUrl, contVerId);
+  console.log('file : ',file);
   // const result = await sharepoint.createFile(file, token, sharepointEndpoint);
   // console.log('result : ',result);
   res.send("salesforce");
