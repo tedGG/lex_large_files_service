@@ -197,10 +197,11 @@ GOOGLE_REFRESH_TOKEN=${refresh_token}
 
 app.post("/googledrive", async (req, res) => {
   console.log('/googledrive endpoint called');
-  const basicUrl = req.headers['basicurl'];
-  const contVerId = req.headers['contverid'];
-  const fileName = req.headers['filename'];
-  const folderId = req.headers['folderid'];
+  const { basicurl, contverid, filename, folderid } = req.body;
+  const basicUrl = basicurl;
+  const contVerId = contverid;
+  const fileName = filename;
+  const folderId = folderid;
   
   console.log('Basic URL:', basicUrl);
   console.log('Content Version ID:', contVerId);
