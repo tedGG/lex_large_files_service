@@ -199,7 +199,8 @@ GOOGLE_REFRESH_TOKEN=${refresh_token}
 
 app.post("/googledrive", async (req, res) => {
   console.log('/googledrive endpoint called');
-  console.log('Request body:', req.body); // Debug log
+  console.log('Request body:', req.body);
+  
   const { basicurl, contverid, filename, folderid } = req.body;
   const basicUrl = basicurl;
   const contVerId = contverid;
@@ -212,30 +213,72 @@ app.post("/googledrive", async (req, res) => {
   console.log('Folder ID:', folderId || 'root');
   
   try {
-    const token = await googledrive.getAccessToken();
-    console.log('Google Drive token obtained');
-    
-    const file = await salesforce.getFile(basicUrl, contVerId);
-    console.log('File downloaded from Salesforce');
-    
-    const result = await googledrive.uploadFile(file, token, fileName, folderId);
-    console.log('File uploaded to Google Drive');
-    
-    res.json({
+    // Validate inputs
+    if (!basicUrl || !contVerId || !fileName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: basicurl, contverid, or filename'
+      });
+    }
+
+    // Send immediate response (202 Accepted)
+    res.status(202).json({ 
       success: true,
-      message: 'File transferred successfully from Salesforce to Google Drive',
-      fileId: result.id,
-      fileName: result.name,
-      webViewLink: `https://drive.google.com/file/d/${result.id}/view`
+      message: 'Upload started in background', 
+      filename: fileName,
+      status: 'processing'
     });
+
+    // Process upload in background
+    processUploadStream(basicUrl, contVerId, fileName, folderId).catch(err => {
+      console.error('❌ Background upload failed:', err.message);
+      console.error('Stack:', err.stack);
+    });
+    
   } catch (error) {
     console.error('Error in /googledrive route:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    // Response already sent, just log the error
   }
 });
+
+// NEW FUNCTION: Process upload using streaming
+async function processUploadStream(basicUrl, contVerId, fileName, folderId) {
+  try {
+    console.log('\n--- Starting background upload (streaming) ---');
+    console.log('File:', fileName);
+    
+    // Get file size first
+    const fileSize = await salesforce.getFileSize(basicUrl, contVerId);
+    console.log(`File size: ${(fileSize / (1024 * 1024)).toFixed(2)} MB`);
+    
+    // Get Google Drive access token
+    const token = await googledrive.getAccessToken();
+    console.log('Google Drive token obtained ✅');
+    
+    // Get file as stream (memory efficient)
+    const fileStream = await salesforce.getFileStream(basicUrl, contVerId);
+    console.log('File stream ready ✅');
+    
+    // Upload using stream
+    const result = await googledrive.uploadFileStream(
+      fileStream,
+      fileSize,
+      token,
+      fileName,
+      folderId
+    );
+    
+    console.log('✅ File uploaded successfully to Google Drive!');
+    console.log('File ID:', result.id);
+    console.log('File Name:', result.name);
+    console.log('Web View Link:', `https://drive.google.com/file/d/${result.id}/view`);
+    console.log('--- Upload complete ---\n');
+    
+  } catch (error) {
+    console.error('❌ Upload process failed:', error.message);
+    console.error('Stack:', error.stack);
+  }
+}
 
 app.listen(port, () => {
   console.log(`\n🚀 Server running on port ${port}`);
