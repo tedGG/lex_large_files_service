@@ -7,6 +7,7 @@ const port = process.env.PORT || 4000;
 
 const salesforce = require("./salesforce");
 const sharepoint = require("./sharepoint");
+const googledrive = require("./googledrive");
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -194,38 +195,60 @@ GOOGLE_REFRESH_TOKEN=${refresh_token}
   }
 });
 
-app.get("/salesforce", async (req, res) => {
-  console.log('/salesforce');
+app.get("/googledrive", async (req, res) => {
+  console.log('/googledrive endpoint called');
   const basicUrl = req.headers['basicurl'];
-  const sharepointEndpoint = req.headers['sharepointendpoint'];
   const contVerId = req.headers['contverid'];
-  console.log('OUTPUT : ', basicUrl);
+  const fileName = req.headers['filename'];
+  const folderId = req.headers['folderid']; // Optional: Google Drive folder ID
+  
+  console.log('Basic URL:', basicUrl);
+  console.log('Content Version ID:', contVerId);
+  console.log('File Name:', fileName);
+  console.log('Folder ID:', folderId || 'root');
   
   try {
-    const token = await sharepoint.getAccessToken();
-    console.log('token : ', token);
+    // Get Google Drive access token
+    const token = await googledrive.getAccessToken();
+    console.log('Google Drive token obtained');
     
+    // Download file from Salesforce
     const file = await salesforce.getFile(basicUrl, contVerId);
-    console.log('file : ', file);
+    console.log('File downloaded from Salesforce');
     
-    const result = await sharepoint.createFile(file, token, sharepointEndpoint);
-    console.log('result : ', result);
+    // Upload to Google Drive
+    const result = await googledrive.uploadFile(file, token, fileName, folderId);
+    console.log('File uploaded to Google Drive');
     
-    res.send("salesforce");
+    res.json({
+      success: true,
+      message: 'File transferred successfully from Salesforce to Google Drive',
+      fileId: result.id,
+      fileName: result.name,
+      webViewLink: `https://drive.google.com/file/d/${result.id}/view`
+    });
   } catch (error) {
-    console.error('Error in /salesforce route:', error);
-    res.status(500).send('Error processing request: ' + error.message);
+    console.error('Error in /googledrive route:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
 app.listen(port, () => {
   console.log(`\n🚀 Server running on port ${port}`);
-  console.log(`\n📝 To get your Google refresh token:`);
-  console.log(`   Visit: https://lexington-large-files-upload-1.onrender.com/auth`);
-  console.log(`\n📋 Available routes:`);
+  console.log(`\n📝 Available routes:`);
   console.log(`   GET /wakeup - Health check`);
-  console.log(`   GET /auth - Start Google OAuth flow`);
+  console.log(`   GET /auth - Get Google refresh token (one-time setup)`);
   console.log(`   GET /oauth2callback - OAuth callback (automatic)`);
-  console.log(`   GET /salesforce - Process Salesforce file upload`);
+  console.log(`   GET /salesforce - Transfer file from Salesforce to SharePoint`);
+  console.log(`   GET /googledrive - Transfer file from Salesforce to Google Drive`);
+  console.log(`\n📋 Google Drive endpoint usage:`);
+  console.log(`   Headers required:`);
+  console.log(`     - basicurl: Salesforce instance URL`);
+  console.log(`     - contverid: Salesforce ContentVersion ID`);
+  console.log(`     - filename: Name for the file in Google Drive`);
+  console.log(`     - folderid: (optional) Google Drive folder ID`);
   console.log('');
 });
