@@ -195,12 +195,12 @@ GOOGLE_REFRESH_TOKEN=${refresh_token}
   }
 });
 
-app.get("/googledrive", async (req, res) => {
+app.post("/googledrive", async (req, res) => {
   console.log('/googledrive endpoint called');
   const basicUrl = req.headers['basicurl'];
   const contVerId = req.headers['contverid'];
   const fileName = req.headers['filename'];
-  const folderId = req.headers['folderid']; // Optional: Google Drive folder ID
+  const folderId = req.headers['folderid'];
   
   console.log('Basic URL:', basicUrl);
   console.log('Content Version ID:', contVerId);
@@ -208,15 +208,12 @@ app.get("/googledrive", async (req, res) => {
   console.log('Folder ID:', folderId || 'root');
   
   try {
-    // Get Google Drive access token
     const token = await googledrive.getAccessToken();
     console.log('Google Drive token obtained');
     
-    // Download file from Salesforce
     const file = await salesforce.getFile(basicUrl, contVerId);
     console.log('File downloaded from Salesforce');
     
-    // Upload to Google Drive
     const result = await googledrive.uploadFile(file, token, fileName, folderId);
     console.log('File uploaded to Google Drive');
     
