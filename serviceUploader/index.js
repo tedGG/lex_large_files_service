@@ -3,6 +3,8 @@ const axios = require("axios");
 require("dotenv").config();
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 const port = process.env.PORT || 4000;
 
 const salesforce = require("./salesforce");
@@ -197,6 +199,7 @@ GOOGLE_REFRESH_TOKEN=${refresh_token}
 
 app.post("/googledrive", async (req, res) => {
   console.log('/googledrive endpoint called');
+  console.log('Request body:', req.body); // Debug log
   const { basicurl, contverid, filename, folderid } = req.body;
   const basicUrl = basicurl;
   const contVerId = contverid;
